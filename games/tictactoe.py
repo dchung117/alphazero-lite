@@ -146,13 +146,6 @@ if __name__ == "__main__":
 
         # Print winning player if game is over
         if is_over:
-            if reward == 1:
-                print(f"Player {player} won!")
-            else:
-                print("Draw.")
-            print(f"End config: ")
-            for row in board:
-                print(row.tolist())
             break
         else: # print current board state
             print("New board: ")
@@ -161,3 +154,12 @@ if __name__ == "__main__":
 
         # Change current player
         player = tictactoe.get_opponent(player)
+
+    # Print end game outcome
+    if reward == 1:
+        print(f"Player {player} won!")
+    else:
+        print("Draw.")
+    print(f"End config: ")
+    for row in board:
+        print(row.tolist())
