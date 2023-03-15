@@ -3,8 +3,6 @@ import numpy as np
 class TicTacToe(object):
     """
     Python implementation of TicTacToe
-
-    Args:
     """
     def __init__(self) -> None:
         self.n_rows, self.n_cols = 3, 3
@@ -63,6 +61,10 @@ class TicTacToe(object):
         Returns:
             bool: Whether player won game
         """
+        # return false if no action taken (i.e. root node)
+        if action is None:
+            return False
+
         # convert action to row, col
         row = action // self.n_cols
         col = action % self.n_cols
@@ -124,6 +126,31 @@ class TicTacToe(object):
             int: Opponent player ID
         """
         return -player
+
+    def get_opponent_value(self, value: int) -> int:
+        """
+        Negate the value of opposing player
+
+        Args:
+            value (int): Value of opposing player that won
+
+        Returns:
+            int: Negated value of opposing player
+        """
+        return -value
+
+    def change_persepective(self, board: np.ndarray, player: int) -> np.ndarray:
+        """
+        Alter current board array point of view to the opponent's.
+
+        Args:
+            board (np.ndarray): Current board array
+            player (int): Opponent player ID
+
+        Returns:
+            np.ndarray: Board array w/ flipped player perspective
+        """
+        return board*player
 
 if __name__ == "__main__":
     # Initialize game
