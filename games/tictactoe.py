@@ -139,7 +139,7 @@ class TicTacToe(object):
         """
         return -value
 
-    def change_persepective(self, board: np.ndarray, player: int) -> np.ndarray:
+    def change_perspective(self, board: np.ndarray, player: int) -> np.ndarray:
         """
         Alter current board array point of view to the opponent's.
 
@@ -151,42 +151,3 @@ class TicTacToe(object):
             np.ndarray: Board array w/ flipped player perspective
         """
         return board*player
-
-if __name__ == "__main__":
-    # Initialize game
-    tictactoe = TicTacToe()
-    player = 1
-    board = tictactoe.get_empty_board()
-    reward, is_over = 0, False
-
-    # Continue playing moves until end game
-    while True:
-        # Get next set of valid moves
-        valid_moves = tictactoe.get_valid_moves(board)
-
-        # Take action
-        action = np.random.choice(tictactoe.n_actions, p=valid_moves/valid_moves.sum())
-        board = tictactoe.apply_move(board, action, player)
-
-        # Check if game is over
-        reward, is_over = tictactoe.check_end_game(board, action)
-
-        # Print winning player if game is over
-        if is_over:
-            break
-        else: # print current board state
-            print("New board: ")
-            for row in board:
-                print(row.tolist())
-
-        # Change current player
-        player = tictactoe.get_opponent(player)
-
-    # Print end game outcome
-    if reward == 1:
-        print(f"Player {player} won!")
-    else:
-        print("Draw.")
-    print(f"End config: ")
-    for row in board:
-        print(row.tolist())
