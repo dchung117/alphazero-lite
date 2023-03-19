@@ -151,3 +151,21 @@ class TicTacToe(object):
             np.ndarray: Board array w/ flipped player perspective
         """
         return board*player
+
+    def encode_board(self, board: np.ndarray) -> np.ndarray:
+        """
+        Encode board into 3-channel array (i.e. player moves, opponent moves, vacant spaces).
+
+        Args:
+            board (np.ndarray): Current board array
+
+        Returns:
+            np.ndarray: Encoded board array represented as 3-channel array
+        """
+        # Get player/opp moves and vacant spaces
+        player_moves = (board == 1)
+        opp_moves = (board == -1)
+        empty_spaces = (board == 0)
+
+        # Stack arrays
+        return np.stack((player_moves, opp_moves, empty_spaces), axis=0).astype(np.float32)

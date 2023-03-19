@@ -1,32 +1,8 @@
 from __future__ import annotations
-from typing import Protocol, Optional
+from typing import Optional
 import numpy as np
-from games.tictactoe import TicTacToe
 
-class Game(Protocol):
-    def get_empty_board(self) -> None:
-        ...
-
-    def apply_move(self, board: np.array, action: int, player: int) -> np.ndarray:
-        ...
-
-    def get_valid_moves(self, board: np.ndarray) -> np.ndarray:
-        ...
-
-    def check_win(self, board: np.ndarray, action: int) -> bool:
-        ...
-
-    def check_end_game(self, board: np.ndarray, action: int) -> tuple[int, bool]:
-        ...
-
-    def get_opponent(self, player: int) -> int:
-        ...
-
-    def get_opponent_value(self, value: int) -> int:
-        ...
-
-    def change_perspective(self, board: np.ndarray, player: int) -> np.ndarray:
-        ...
+from games.base import Game
 
 class Node(object):
     """
@@ -117,7 +93,7 @@ class Node(object):
         rollout_state = self.state.copy()
         rollout_player = 1
         while True:
-            # Select random action from available moves
+            # Select action from policy
             valid_moves = self.game.get_valid_moves(rollout_state)
             action = np.random.choice(np.where(valid_moves == 1)[0])
 
