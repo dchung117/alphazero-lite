@@ -1,6 +1,11 @@
 from typing import List, Tuple, Dict, Any
+import random
+
 import numpy as np
 import torch
+torch.autograd.set_detect_anomaly(True)
+import torch.nn.functional as F
+
 from tqdm import tqdm
 
 from games.base import Game
@@ -71,14 +76,41 @@ class AlphaZeroLite(object):
 
                     # Encode state as 3-channel tensor
                     h_state = self.game.encode_board(h_state)
-                    out_memory.append((h_state, h_action, h_player, h_value))
+                    out_memory.append((h_state, h_action, h_value))
                 return out_memory
 
             # Change player for alpha zero to continue self play
             player = self.game.get_opponent(player)
 
     def train(self, memory: list):
-        pass
+        # Shuffle training data
+        random.shuffle(memory)
+
+        # Loop through batches
+        for b_idx in range(0, len(memory), self.kwargs["batch_size"]):
+            # Zero-grad
+            self.optim.zero_grad()
+
+            max_b_idx = len(memory) - 1
+            batch = memory[b_idx:min(b_idx+self.kwargs["batch_size"], max_b_idx)]
+
+            # Get state, policy_targets, value_targets from memory
+            state, policy_tgts, val_tgts = zip(*batch)
+            state, policy_tgts, val_tgts = np.array(state), np.array(policy_tgts), np.array(val_tgts).reshape(-1, 1)
+            state, policy_tgts, val_tgts = torch.tensor(state, dtype=torch.float32).to(self.device), torch.tensor(policy_tgts, dtype=torch.float32).to(self.device), \
+                torch.tensor(val_tgts, dtype=torch.float32).to(self.device)
+
+            # Get policy and value from model
+            policy_pred, val_pred = self.model(state)
+
+            # Compute losses
+            policy_loss = F.cross_entropy(policy_pred, policy_tgts)
+            value_loss = F.mse_loss(val_pred, val_tgts)
+            loss = policy_loss + value_loss
+
+            # Update model weights
+            loss.backward()
+            self.optim.step()
 
     def learn(self):
         """
@@ -99,7 +131,8 @@ class AlphaZeroLite(object):
                 # Collect memory from self-play
                 memory += self.self_play()
 
-            # Train polic/value networks
+            # Train policy/value networks
+            self.model.train()
             for _ in tqdm(range(self.kwargs["n_epochs"])):
                 self.train(memory)
 

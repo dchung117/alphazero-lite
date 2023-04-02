@@ -178,7 +178,7 @@ class Node(object):
 
         # Compute upper limit
         if self.is_alpha: # MCTS w/ policy network
-            upper_limit = self.kwargs["C"]*np.sqrt(self.visit_ct/(node.visit_ct + 1))*self.prior
+            upper_limit = self.kwargs["C"]*(np.sqrt(self.visit_ct)/(node.visit_ct + 1))*node.prior
         else: # standard MCTS
             upper_limit = self.kwargs["C"]*np.sqrt(np.log(self.visit_ct)/node.visit_ct)
         ucb = q_val + upper_limit

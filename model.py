@@ -104,8 +104,9 @@ class ResBlock(nn.Module):
             ResBlock output tensor feature map
         """
         # Compute residual (i.e. forward pass through both cnn blocks)
-        res_x = F.relu(self.bn_1(self.conv_1(x)))
-        res_x = self.bn_2(self.conv_2(res_x))
+        res_x = x
+        x = F.relu(self.bn_1(self.conv_1(x)))
+        x = self.bn_2(self.conv_2(x))
 
         # Add residual
         x += res_x
