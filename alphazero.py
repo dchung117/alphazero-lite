@@ -38,7 +38,7 @@ class AlphaZeroLite(object):
         # Setup MCTS
         self.mcts = MCTS(game, kwargs, model, device)
 
-    def self_play(self) -> List[Tuple[np.ndarray, np.ndarray, int, float]]:
+    def self_play(self) -> List[Tuple[np.ndarray, np.ndarray, float]]:
         """
         Agent plays itself and collects game data w/ outcomes via Monte-Carlo tree search.
 
@@ -82,7 +82,16 @@ class AlphaZeroLite(object):
             # Change player for alpha zero to continue self play
             player = self.game.get_opponent(player)
 
-    def train(self, memory: list):
+    def train(self, memory: List[Tuple[np.ndarray, np.ndarray, float]]) -> None:
+        """
+        Train policy and value networks on memory buffer obtained from Monte-Carlo tree search.
+
+        Args:
+            memory: List[Tuple[np.ndarray, np.ndarray, int, float]]
+                Memory buffer containing tuples of board state, MCTS policy target, end-game values.
+        Returns:
+            None
+        """
         # Shuffle training data
         random.shuffle(memory)
 
