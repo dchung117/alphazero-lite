@@ -24,19 +24,16 @@ class AlphaZeroLite(object):
             Game that agent will learn to play
         kwargs: Dict[str, Any]
             Lookup table of hyperparameters
-        device: torch.device
-            Device where model and batch data will be stored
     """
     def __init__(self, model: torch.nn.Module, optimizer: torch.optim.Optimizer,
-        game: Game, kwargs: Dict[str, Any], device: torch.device) -> None:
+        game: Game, kwargs: Dict[str, Any]) -> None:
         self.model = model
         self.optim = optimizer
         self.game = game
         self.kwargs = kwargs
-        self.device = device
 
         # Setup MCTS
-        self.mcts = MCTS(game, kwargs, model, device)
+        self.mcts = MCTS(game, kwargs, model)
 
     def self_play(self) -> List[Tuple[np.ndarray, np.ndarray, float]]:
         """
@@ -62,8 +59,12 @@ class AlphaZeroLite(object):
             # NOTE: state always from perspective of CURRENT PLAYER
             memory.append((neutral_state, mcts_policy, player))
 
+            # Apply temperature-scaling to policy before sampling action
+            mcts_policy_temp = mcts_policy ** (1/self.kwargs["tau"])
+            mcts_policy_temp /= mcts_policy_temp.sum()
+
             # Sample action from MCTS policy, apply
-            action = np.random.choice(self.game.n_actions, p=mcts_policy)
+            action = np.random.choice(self.game.n_actions, p=mcts_policy_temp)
             state = self.game.apply_move(state, action, player)
 
             # Check if game is over
@@ -106,8 +107,8 @@ class AlphaZeroLite(object):
             # Get state, policy_targets, value_targets from memory
             state, policy_tgts, val_tgts = zip(*batch)
             state, policy_tgts, val_tgts = np.array(state), np.array(policy_tgts), np.array(val_tgts).reshape(-1, 1)
-            state, policy_tgts, val_tgts = torch.tensor(state, dtype=torch.float32).to(self.device), torch.tensor(policy_tgts, dtype=torch.float32).to(self.device), \
-                torch.tensor(val_tgts, dtype=torch.float32).to(self.device)
+            state, policy_tgts, val_tgts = torch.tensor(state, dtype=torch.float32, device=self.model.device), \
+                torch.tensor(policy_tgts, dtype=torch.float32, device=self.model.device), torch.tensor(val_tgts, dtype=torch.float32, device=self.model.device)
 
             # Get policy and value from model
             policy_pred, val_pred = self.model(state)

@@ -17,8 +17,10 @@ class ResNet(nn.Module):
             Number of layers in backbone
         n_hidden: int
             Hidden dimension size
+        device: torch.device
+            Device where model and batch data will be stored
     """
-    def __init__(self, game: Game, n_blocks: int, n_hidden: int) -> None:
+    def __init__(self, game: Game, n_blocks: int, n_hidden: int, device: torch.device) -> None:
         super().__init__()
 
         # Initial conv2d block
@@ -50,6 +52,10 @@ class ResNet(nn.Module):
             nn.Linear(3*game.n_rows*game.n_cols, 1),
             nn.Tanh()
         )
+
+        # Load model to device
+        self.device = device
+        self.to(self.device)
 
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """

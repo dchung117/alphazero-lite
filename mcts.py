@@ -21,11 +21,14 @@ class Node(object):
             Parent node of current state
         action_taken: Optional[int] = None
             Action taken to reach this state
+        visit_ct: int = 0
+            Initial visit count of the node
         prior: int = 0
             Prior policy probability of reaching this state
     """
     def __init__(self, game: Game, kwargs: dict, state: np.ndarray,
-        parent: Optional[Node] = None, action_taken: Optional[int] = None, prior: int = 0, is_alpha: bool = False) -> None:
+        parent: Optional[Node] = None, action_taken: Optional[int] = None,
+        visit_ct: int = 0, prior: int = 0, is_alpha: bool = False) -> None:
         self.game = game
         self.kwargs = kwargs
         self.state = state
@@ -196,14 +199,11 @@ class MCTS(object):
             Keyword arguments containing hyperparameters
         model: Optional[nn.Module] = None
             Optional policy and value networks
-        device: torch.device = torch.device('cpu')
-            Torch device object where model is stored
     """
-    def __init__(self, game: Game, kwargs: dict, model: Optional[nn.Module] = None, device: torch.device = torch.device("cpu")) -> None:
+    def __init__(self, game: Game, kwargs: dict, model: Optional[nn.Module] = None) -> None:
         self.game = game
         self.kwargs = kwargs
         self.model = model
-        self.device = device
 
     @torch.no_grad()
     def search(self, state: np.ndarray) -> np.ndarray:
@@ -218,9 +218,25 @@ class MCTS(object):
         """
         # Create root node
         if self.model != None:
-            root = Node(self.game, self.kwargs, state, is_alpha=True)
+            root = Node(self.game, self.kwargs, state, visit_ct=1, is_alpha=True)
         else:
             root = Node(self.game, self.kwargs, state)
+
+        # Get policy from model, add noise, expand root node before MCTS
+        # (i.e. pre-exploration via expansion before MCTS, mask out illegal moves before search)
+        if self.model != None:
+            policy, _ = self.model(
+                torch.tensor(self.game.encode_board(state), dtype=torch.float32, device=self.model.device).unsqueeze(0)
+            )
+            policy = torch.softmax(policy, axis=1).squeeze(0).cpu().numpy()
+
+            policy = (1 - self.kwargs["dir_epsilon"])*policy + self.kwargs["dir_epsilon"]*np.random.dirichlet(alpha=[self.kwargs["dir_alpha"]]*self.game.n_actions)
+            valid_moves = self.game.get_valid_moves(state)
+            policy *= valid_moves
+            policy /= policy.sum()
+
+            # Initial expansion of root node
+            root.expand(policy)
 
         # Run searches
         for _ in range(self.kwargs["n_searches"]):
@@ -238,7 +254,7 @@ class MCTS(object):
             if not is_terminal:
                 policy = None
                 if self.model != None: # get policy and value from model
-                    enc_state = torch.tensor(self.game.encode_board(curr_node.state), dtype=torch.float32).unsqueeze(0).to(self.device)
+                    enc_state = torch.tensor(self.game.encode_board(curr_node.state), dtype=torch.float32, device=self.model.device).unsqueeze(0)
                     with torch.inference_mode():
                         policy, val = self.model(enc_state)
 

@@ -16,11 +16,11 @@ if __name__ == "__main__":
 
     # Initialize ResNet model
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model = ResNet(tictactoe, 4, 64).to(device)
+    model = ResNet(tictactoe, 4, 64, device=device)
     model.eval()
 
     # Initialize adam optimizer
-    optim = Adam(model.parameters(), lr=0.001)
+    optim = Adam(model.parameters(), lr=0.001, weight_decay=0.0001)
 
     # Initialize AlphaZero hyperparameters
     kwargs = {
@@ -29,11 +29,14 @@ if __name__ == "__main__":
         "n_iters": 3,
         "n_self_plays": 500,
         "n_epochs": 4,
-        "batch_size": 64
+        "batch_size": 64,
+        "tau": 1.25, # policy temperature for action sampling
+        "dir_epsilon": 0.25, # Dirichlet epsilon for pre-MCTS node expansion/exploration of root
+        "dir_alpha": 0.3 # Dirichlet alpha
     }
 
     # Create AlphaZeroLite object
-    alpha_zero = AlphaZeroLite(model, optim, tictactoe, kwargs, device=device)
+    alpha_zero = AlphaZeroLite(model, optim, tictactoe, kwargs)
     alpha_zero.learn()
 
     # Test out trained model
@@ -44,9 +47,9 @@ if __name__ == "__main__":
 
     encoded_state = tictactoe.encode_board(board)
 
-    tensor_state = torch.tensor(encoded_state).unsqueeze(0)
+    tensor_state = torch.tensor(encoded_state, device=model.device).unsqueeze(0)
 
-    policy, value = alpha_zero.model(tensor_state.to(device))
+    policy, value = alpha_zero.model(tensor_state)
     value = value.cpu().item()
     policy = torch.softmax(policy, axis=1).squeeze(0).detach().cpu().numpy()
 
