@@ -4,19 +4,19 @@ import torch
 torch.manual_seed(0)
 from torch.optim import Adam
 
-from games.tictactoe import TicTacToe
+from games.connect_four import ConnectFour
 from model import ResNet
 from alphazero import AlphaZeroLite
 
 if __name__ == "__main__":
     # Initialize game
-    tictactoe = TicTacToe()
+    game = ConnectFour()
     player = 1
-    board = tictactoe.get_empty_board()
+    board = game.get_empty_board()
 
     # Initialize ResNet model
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model = ResNet(tictactoe, 4, 64, device=device)
+    model = ResNet(game, 9, 128, device=device)
     model.eval()
 
     # Initialize adam optimizer
@@ -24,28 +24,28 @@ if __name__ == "__main__":
 
     # Initialize AlphaZero hyperparameters
     kwargs = {
-        "C": 1.4,
-        "n_searches": 60,
-        "n_iters": 3,
+        "C": 2,
+        "n_searches": 600,
+        "n_iters": 1,
         "n_self_plays": 500,
         "n_epochs": 4,
-        "batch_size": 64,
+        "batch_size": 128,
         "tau": 1.25, # policy temperature for action sampling
         "dir_epsilon": 0.25, # Dirichlet epsilon for pre-MCTS node expansion/exploration of root
         "dir_alpha": 0.3 # Dirichlet alpha
     }
 
     # Create AlphaZeroLite object
-    alpha_zero = AlphaZeroLite(model, optim, tictactoe, kwargs)
+    alpha_zero = AlphaZeroLite(model, optim, game, kwargs)
     alpha_zero.learn()
 
     # Test out trained model
-    board = tictactoe.apply_move(board, 2, -1)
-    board = tictactoe.apply_move(board, 4, -1)
-    board = tictactoe.apply_move(board, 6, 1)
-    board = tictactoe.apply_move(board, 8, 1)
+    board = game.apply_move(board, 2, -1)
+    board = game.apply_move(board, 4, -1)
+    board = game.apply_move(board, 6, 1)
+    board = game.apply_move(board, 8, 1)
 
-    encoded_state = tictactoe.encode_board(board)
+    encoded_state = game.encode_board(board)
 
     tensor_state = torch.tensor(encoded_state, device=model.device).unsqueeze(0)
 
@@ -58,5 +58,5 @@ if __name__ == "__main__":
     print("Board state: ", board)
     print("Encoded state: ", tensor_state)
 
-    plt.bar(range(tictactoe.n_actions), policy)
-    plt.savefig("alphazero_policy_chkpt.png")
+    plt.bar(range(game.n_actions), policy)
+    plt.savefig(f"alphazero_policy_chkpt_{game}.png")

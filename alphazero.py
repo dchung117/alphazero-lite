@@ -147,5 +147,5 @@ class AlphaZeroLite(object):
                 self.train(memory)
 
             # Save off checkpoint
-            torch.save(self.model.state_dict(), f"model_chkpt{i}.pt")
-            torch.save(self.optim.state_dict(), f"optim_chkpt{i}.pt")
+            torch.save(self.model.state_dict(), f"model_chkpt{i}_{self.game}.pt")
+            torch.save(self.optim.state_dict(), f"optim_chkpt{i}_{self.game}.pt")

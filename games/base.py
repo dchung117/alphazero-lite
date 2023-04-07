@@ -17,7 +17,7 @@ class Game(Protocol):
     def get_empty_board(self) -> None:
         ...
 
-    def apply_move(self, board: np.array, action: int, player: int) -> np.ndarray:
+    def apply_move(self, board: np.ndarray, action: int, player: int) -> np.ndarray:
         ...
 
     def get_valid_moves(self, board: np.ndarray) -> np.ndarray:
@@ -38,5 +38,5 @@ class Game(Protocol):
     def change_perspective(self, board: np.ndarray, player: int) -> np.ndarray:
         ...
 
-    def encode_board(self, state: np.ndarray) -> np.ndarray:
+    def encode_board(self, board: np.ndarray) -> np.ndarray:
         ...

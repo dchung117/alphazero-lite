@@ -8,6 +8,9 @@ class TicTacToe(object):
         self.n_rows, self.n_cols = 3, 3
         self.n_actions = self.n_rows * self.n_cols
 
+    def __repr__(self) -> str:
+        return "TicTacToe"
+
     def get_empty_board(self) -> np.ndarray:
         """
         Returns an empty tic-tac-toe board.
