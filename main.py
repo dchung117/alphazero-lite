@@ -40,10 +40,11 @@ if __name__ == "__main__":
     alpha_zero.learn()
 
     # Test out trained model
-    board = game.apply_move(board, 2, -1)
-    board = game.apply_move(board, 4, -1)
-    board = game.apply_move(board, 6, 1)
-    board = game.apply_move(board, 8, 1)
+    board = game.apply_move(board, 0, 1)
+    board = game.apply_move(board, 1, 1)
+    board = game.apply_move(board, 2, 1)
+    board = game.apply_move(board, 6, -1)
+    board = game.apply_move(board, 5, -1)
 
     encoded_state = game.encode_board(board)
 
