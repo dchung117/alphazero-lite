@@ -1,7 +1,5 @@
-from base import Game
-
 import numpy as np
-class ConnectFour(Game):
+class ConnectFour(object):
     """
     Python implementation of connect four.
 
