@@ -6,7 +6,7 @@ from torch.optim import Adam
 
 from games.connect_four import ConnectFour
 from model import ResNet
-from alphazero import AlphaZeroLite
+from alphazero import AlphaZeroLite, AlphaZeroLiteParallel
 
 if __name__ == "__main__":
     # Initialize game
@@ -26,8 +26,9 @@ if __name__ == "__main__":
     kwargs = {
         "C": 2,
         "n_searches": 600,
-        "n_iters": 1,
+        "n_iters": 8,
         "n_self_plays": 500,
+        "n_parallel": 100,
         "n_epochs": 4,
         "batch_size": 128,
         "tau": 1.25, # policy temperature for action sampling
@@ -36,7 +37,7 @@ if __name__ == "__main__":
     }
 
     # Create AlphaZeroLite object
-    alpha_zero = AlphaZeroLite(model, optim, game, kwargs)
+    alpha_zero = AlphaZeroLiteParallel(model, optim, game, kwargs)
     alpha_zero.learn()
 
     # Test out trained model

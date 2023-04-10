@@ -1,4 +1,4 @@
-from typing import Protocol
+from typing import Protocol, Tuple
 import numpy as np
 
 class Game(Protocol):
@@ -26,7 +26,7 @@ class Game(Protocol):
     def check_win(self, board: np.ndarray, action: int) -> bool:
         ...
 
-    def check_end_game(self, board: np.ndarray, action: int) -> tuple[int, bool]:
+    def check_end_game(self, board: np.ndarray, action: int) -> Tuple[int, bool]:
         ...
 
     def get_opponent(self, player: int) -> int:

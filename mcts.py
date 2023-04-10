@@ -1,10 +1,11 @@
 from __future__ import annotations
-from typing import Optional
+from typing import Optional, List
 import numpy as np
 import torch
 from torch import nn
 
 from games.base import Game
+from utils import SelfPlayGame
 
 class Node(object):
     """
@@ -290,3 +291,125 @@ class MCTS(object):
         action_probs /= action_probs.sum()
 
         return action_probs
+
+class MCTSParallel(object):
+    """
+    Parallelized Monte Carlo Tree Search (MCTS) implementation for Alpha Zero lite.
+
+    Args:
+        game: Game
+            Game to be played (e.g. TicTacToe)
+        kwargs: dict
+            Keyword arguments containing hyperparameters
+        model: Optional[nn.Module] = None
+            Optional policy and value networks
+    """
+    def __init__(self, game: Game, kwargs: dict, model: Optional[nn.Module] = None) -> None:
+        self.game = game
+        self.kwargs = kwargs
+        self.model = model
+
+    @torch.no_grad()
+    def search(self, states: np.ndarray, self_play_games: List[SelfPlayGame]) -> None:
+        """
+        Apply MCTS starting from specified game states.
+
+        Args:
+            states (np.ndarray): Array representation of current game states
+            self_play_games (List[SelfPlayGame]): List of games being played in parallel
+        Returns:
+            None
+        """
+        # Get policy from model, add noise, expand root node before MCTS
+        # (i.e. pre-exploration via expansion before MCTS, mask out illegal moves before search)
+        if self.model != None:
+            policy, _ = self.model(
+                torch.tensor(self.game.encode_board(states), dtype=torch.float32, device=self.model.device)
+            )
+            policy = torch.softmax(policy, axis=1).cpu().numpy()
+
+            policy = (1 - self.kwargs["dir_epsilon"])*policy + self.kwargs["dir_epsilon"]*np.random.dirichlet(alpha=[self.kwargs["dir_alpha"]]*self.game.n_actions,\
+                                                                                                                size=policy.shape[0])
+            for idx, spg in enumerate(self_play_games):
+                valid_moves = self.game.get_valid_moves(states[idx])
+
+                spg_policy = policy[idx]
+                spg_policy *= valid_moves
+                spg_policy /= spg_policy.sum()
+
+                # Create root node for the game
+                spg.root = Node(self.game, self.kwargs, states[idx], visit_ct=1, is_alpha=True)
+
+                # Initial expansion of root node
+                spg.root.expand(spg_policy)
+        else:
+            for idx, spg in self_play_games:
+                spg.root = Node(self.game, self.kwargs, states[idx])
+
+        # Run searches
+        for _ in range(self.kwargs["n_searches"]):
+            for spg in self_play_games:
+                # Initialize current self-play-game node to None
+                spg.node = None
+                curr_node = spg.root
+
+                # select leaf node - find a node whose actions are not fully explored
+                while curr_node.is_fully_expanded():
+                    # Move to child node
+                    curr_node = curr_node.select()
+
+                # backpropagate if terminal node reached
+                val, is_terminal = self.game.check_end_game(curr_node.state, curr_node.action_taken)
+                val = self.game.get_opponent_value(val)
+
+                if is_terminal:
+                    # backpropagate node value up tree
+                    curr_node.backprop(val)
+                else:
+                    # Update current node in self-play game
+                    spg.node = curr_node
+
+            # Get expandable nodes from self-play games (i.e. games that are not over)
+            expandable_games = [idx for idx in range(len(self_play_games)) if self_play_games[idx].node is not None]
+            if len(expandable_games):
+                states = np.stack([self_play_games[i].node.state for i in expandable_games], axis=0)
+                if self.model != None: # get policies and values from model
+                    enc_state = torch.tensor(self.game.encode_board(states), dtype=torch.float32, device=self.model.device)
+                    with torch.inference_mode():
+                        policy, val = self.model(enc_state)
+
+                        # softmax on policy
+                        policy = torch.softmax(policy, axis=1).cpu().numpy()
+                        val = val.cpu().numpy()
+
+                    # Apply moves to games
+                    for idx, game_idx in enumerate(expandable_games):
+                        # Get policy, value, curr_node for game
+                        spg_policy = policy[idx]
+                        spg_val = val[idx]
+                        spg_node = self_play_games[game_idx].node
+
+                        # set invalid moves to 0, rescale
+                        valid_moves = self.game.get_valid_moves(self_play_games[game_idx].node.state)
+                        spg_policy *= valid_moves
+                        spg_policy /= spg_policy.sum()
+
+                        # expand leaf node - take an action
+                        spg_node.expand(spg_policy)
+
+                        # backpropagate node value up tree
+                        spg_node.backprop(spg_val)
+                else:
+                    # Apply moves to games w/o policies
+                    for idx, game_idx in enumerate(expandable_games):
+                        # Get current node per game
+                        spg_node = self_play_games[game_idx].node
+
+                        # expand leaf node, take random action
+                        spg_node = spg_node.expand()
+
+                        # simulate by taking random actions
+                        spg_val = spg_node.simulate()
+
+                        # backpropagate value
+                        spg_node.backprop(val)

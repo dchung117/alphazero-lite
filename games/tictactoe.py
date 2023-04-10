@@ -1,3 +1,4 @@
+from typing import Tuple
 import numpy as np
 
 class TicTacToe(object):
@@ -96,7 +97,7 @@ class TicTacToe(object):
 
         return win_row or win_col or win_diag
 
-    def check_end_game(self, board: np.array, action: int) -> tuple[int, bool]:
+    def check_end_game(self, board: np.array, action: int) -> Tuple[int, bool]:
         """
         Check if game is over, return the reward (1 for win, 0 for draw) and if game ended (bool)
 
@@ -171,4 +172,10 @@ class TicTacToe(object):
         empty_spaces = (board == 0)
 
         # Stack arrays
-        return np.stack((player_moves, opp_moves, empty_spaces), axis=0).astype(np.float32)
+        enc_board = np.stack((player_moves, opp_moves, empty_spaces), axis=0).astype(np.float32)
+
+        # Swap batch and channel axes (if multiple boards passed)
+        if len(board.shape) == 3:
+            enc_board = enc_board.swapaxes(0, 1)
+
+        return enc_board
